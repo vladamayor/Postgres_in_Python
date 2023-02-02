@@ -30,12 +30,19 @@ class User:
         """) 
         conn.commit()
 
-        
+
     def show_info(self):
         cur.execute("""
         SELECT * FROM users
         JOIN phones using(user_id);""")
         pprint(cur.fetchall())
+    
+
+    def _info(self):
+        cur.execute("""
+        SELECT * FROM users
+        JOIN phones using(user_id);""")
+        return cur.fetchall()
 
         
     def add_user(self, name, last_name, email):
@@ -46,21 +53,19 @@ class User:
         ON CONFLICT (email) DO NOTHING;
         """, (name, last_name, email))
         conn.commit()
-        cur.execute("""
-        SELECT * FROM users;
-        """)
-        pprint(cur.fetchall())
 
 
-    def update_user(self, name, last_name, email, last_number, new_number, user_id):
-        cur.execute("""
-        UPDATE users SET name=%s, last_name=%s, email=%s
-        WHERE user_id=%s;""", (name, last_name, email, user_id))
-        cur.execute("""
+    def update_user(self, colum, data, user_id):
+        if colum == 'number':
+            last_number = input('Введите номер, который нужно сменить: ')
+            cur.execute("""
         UPDATE phones SET number=%s
-        WHERE user_id=%s AND number=%s;""", (new_number, user_id, last_number))
+        WHERE user_id=%s AND number=%s;""", (data, user_id, last_number))
+        else:
+            cur.execute("""
+        UPDATE users SET %(colum)s='%(data)s'
+        WHERE user_id=%(id)s;"""%{'colum': colum, 'data': data, 'id': user_id})
         conn.commit()
-        self.show_info()
 
 
     def add_number(self, number, user_id):
@@ -71,10 +76,6 @@ class User:
         ON CONFLICT (number) DO NOTHING;        
         """, (number, user_id))
         conn.commit()
-        cur.execute("""
-        SELECT * FROM phones;
-        """)
-        pprint(cur.fetchall())
 
 
     def delete_number(self, user_id, number):
@@ -82,7 +83,6 @@ class User:
         DELETE FROM phones WHERE user_id=%s AND number=%s;
         """, (user_id, number))
         conn.commit()
-        self.show_info()
 
 
     def delete_user(self, user_id):
@@ -93,17 +93,14 @@ class User:
         DELETE FROM users WHERE user_id=%s;
         """, (user_id,))
         conn.commit()
-        self.show_info()
 
 
-    def find_user(self, name, last_name, email, number):
-        cur.execute("""
-        SELECT user_id FROM users
-        JOIN phones USING(user_id)
-        WHERE name=%s OR last_name=%s OR email=%s OR number=%s;
-        """, (name, last_name,  email, number))
-        pprint(cur.fetchall())
-
+    def find_user(self, data):
+        l_data = data.split()
+        l_users = self._info()
+        for el in l_users:
+            if set(l_data).issubset(el):
+                    pprint(el) 
 
 
 if __name__ == '__main__':
@@ -115,9 +112,10 @@ if __name__ == '__main__':
             Client.add_user('Vlada', 'Mayorova', 'vlada@')
             Client.add_number('+79999999990', 1)
             Client.add_number('+78888888888', 2)
-            Client.update_user('Sevochka', 'Mayorov', 'seva@', '+79999999999', '+71111111111', 1)
-            Client.delete_number(1, '+79999999990')
-            Client.find_user('Vlada', 'Mayorova', 'vlada@', None)
+            Client.update_user('name', 'Sevochka', 1)
+            Client.update_user('number', '+70000000002', 1)
+            Client.delete_number(2, '+78888888888')
+            Client.find_user('Mayorova')
             Client.delete_user(2)
             Client.show_info()
     conn.close()
